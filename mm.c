@@ -20,11 +20,11 @@ typedef struct header {
 } BlockHeader;
 
 /* Macros to handle the free flag at bit 0 of the next pointer of header pointed at by p */
-#define GET_NEXT(p)    (void *) (p->next)    /* TODO: Mask out free flag */
-#define SET_NEXT(p,n)  p->next = (void *) n  /* TODO: Preserve free flag */
+#define GET_NEXT(p)    (void *) ((uintptr_t) (p->next) & 0xFE)    /* 15 * `1111´ + ´1110´ to mask out the flag bit TEST THIS :)*/
+#define SET_NEXT(p,n)  p->next = (void *) ((GET_FREE(p) + 0xFFFFFFFFFFFFFFFE) & n ) | GET_FREE(p) /* This works according to a truth table TEST THIS :) */
 #define GET_FREE(p)    (uint8_t) ( (uintptr_t) (p->next) & 0x1 )   /* OK -- do not change */
-#define SET_FREE(p,f)  /* TODO: Set free bit of p->next to f */
-#define SIZE(p)        (size_t) ( 0 ) /* TODO: Caluculate size of block from p and p->next */ 
+#define SET_FREE(p,f)  (uint8_t) ((uintptr_t) p->next = ((uintptr_t) (p->next) | f) & f) /*f needs to be either 0x0 or 0x1 TEST THIS :)*/
+#define SIZE(p)        (size_t) ( p->next - p - 0x40 ) /* Here 0x40 is 8 bytes for the block header TEST THIS :)*/ 
 
 #define MIN_SIZE     (8)   // A block should have at least 8 bytes available for the user
 
