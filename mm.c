@@ -31,6 +31,7 @@ typedef struct header {
 
 static BlockHeader * first = NULL;
 static BlockHeader * current = NULL;
+static BlockHeader * dummy = NULL;
 
 /**
  * @name    simple_init
@@ -38,8 +39,11 @@ static BlockHeader * current = NULL;
  *
  */
 void simple_init() {
-  uintptr_t aligned_memory_start = memory_start;  /* TODO: Alignment */
-  uintptr_t aligned_memory_end   = memory_end;    /* TODO: Alignment */
+
+  // UNTESTED !!! added " + start % MIN_SIZE (8)" to align
+  uintptr_t aligned_memory_start = memory_start + memory_start % MIN_SIZE;  /* TODO: Alignment */
+  // UNTESTED !!! added " - end % MIN_SIZE (8)" to align
+  uintptr_t aligned_memory_end   = memory_end - memory_start % MIN_SIZE;    /* TODO: Alignment */
   BlockHeader * last;
 
   /* Already initalized ? */
@@ -47,6 +51,12 @@ void simple_init() {
     /* Check that we have room for at least one free block and an end header */
     if (aligned_memory_start + 2*sizeof(BlockHeader) + MIN_SIZE <= aligned_memory_end) {
       /* TODO: Place first and last blocks and set links and free flags properly */
+      
+      // UNTESTED !!! Gets type warnings 
+      first = aligned_memory_start;
+      SET_FREE(first, 0);
+      dummy = aligned_memory_end - sizeof(BlockHeader) - 1; // The memory end is one address above actual end
+      SET_FREE(dummy, 1);
     }
     current = first;     
   } 
@@ -69,11 +79,12 @@ void* simple_malloc(size_t size) {
     simple_init();
     if (first == NULL) return NULL;
   }
-
-  size_t aligned_size = size;  /* TODO: Alignment */
+  // UNTESTED !!! added " + size % MIN_SIZE (8)" to align
+  size_t aligned_size = size + size % MIN_SIZE;  /* TODO: Alignment */
 
   /* Search for a free block */
   BlockHeader * search_start = current;
+  void * temp = NULL;
   do {
  
     if (GET_FREE(current)) {
@@ -85,11 +96,15 @@ void* simple_malloc(size_t size) {
         /* Will the remainder be large enough for a new block? */
         if (SIZE(current) - aligned_size < sizeof(BlockHeader) + MIN_SIZE) {
           /* TODO: Use block as is, marking it non-free*/
+          // UNTESTED !!!
+          SET_FREE(current, 1);
+          temp = current;
         } else {
           /* TODO: Carve aligned_size from block and allocate new free block for the rest */
         }
-        
-        return (void *) NULL; /* TODO: Return address of current's user_block and advance current */
+        // UNTESTED !!!
+        current = GET_NEXT(current);
+        return (void *) (temp + sizeof(BlockHeader)); /* TODO: Return address of current's user_block and advance current */
       }
     }
 
