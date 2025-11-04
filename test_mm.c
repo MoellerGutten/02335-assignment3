@@ -13,7 +13,7 @@
  */
 
 int main(int argc, char ** argv) {
-
+  
   /* Ensure that macros are working */
   int ret = simple_macro_test();
   if (ret > 0) {

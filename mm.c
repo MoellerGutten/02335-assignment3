@@ -38,12 +38,10 @@ static BlockHeader * current = NULL;
  *
  */
 void simple_init() {
-
   // UNTESTED !!! added " + start % MIN_SIZE (8)" to align
-  uintptr_t aligned_memory_start = memory_start + memory_start % MIN_SIZE;  /* TODO: Alignment */
-  // UNTESTED !!! added " - end % MIN_SIZE (8)" to align
-  uintptr_t aligned_memory_end   = memory_end - memory_start % MIN_SIZE;    /* TODO: Alignment */
-  BlockHeader * last;
+  uintptr_t aligned_memory_start = memory_start % MIN_SIZE == 0 ? memory_start : memory_start - memory_start % MIN_SIZE + MIN_SIZE;  /* TODO: Alignment */
+  // UNTESTED !!! added " - end % MIN_SIZE (8)" to align. -1 since memory_end points to the first bit of memory we *can'* use
+  uintptr_t aligned_memory_end = memory_end - memory_end % MIN_SIZE - 1;    /* TODO: Alignment */
 
   /* Already initalized ? */
   if (first == NULL) {
@@ -51,11 +49,13 @@ void simple_init() {
     if (aligned_memory_start + 2*sizeof(BlockHeader) + MIN_SIZE <= aligned_memory_end) {
       /* TODO: Place first and last blocks and set links and free flags properly */
       
-      // UNTESTED !!! Gets type warnings 
-      first = aligned_memory_start;
+      // UNTESTED !!!
+      first = (void *) aligned_memory_start;
       SET_FREE(first, 0);
-      last = aligned_memory_end - sizeof(BlockHeader) - 1; // The memory end is one address above actual end
+      BlockHeader * last = (void *) (aligned_memory_end - sizeof(BlockHeader));
       SET_FREE(last, 1);
+      SET_NEXT(first, last);
+      SET_NEXT(last, first);
     }
     current = first;     
   } 
@@ -73,13 +73,13 @@ void simple_init() {
  *
  */
 void* simple_malloc(size_t size) {
-  
   if (first == NULL) {
     simple_init();
     if (first == NULL) return NULL;
   }
-  // UNTESTED !!! added " + size % MIN_SIZE (8)" to align
-  size_t aligned_size = size + size % MIN_SIZE;  /* TODO: Alignment */
+  return ;
+  // UNTESTED !!! added the expression below to align
+  size_t aligned_size = size % MIN_SIZE == 0 ? size : size - size % MIN_SIZE + MIN_SIZE;  /* TODO: Alignment */
 
   /* Search for a free block */
   BlockHeader * search_start = current;
@@ -125,6 +125,7 @@ void* simple_malloc(size_t size) {
  *
  */
 void simple_free(void * ptr) {
+  return ;
   BlockHeader * block = NULL; /* TODO: Find block corresponding to ptr */
   if (GET_FREE(block)) {
     /* Block is not in use -- probably an error */
