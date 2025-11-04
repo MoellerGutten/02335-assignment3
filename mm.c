@@ -20,11 +20,11 @@ typedef struct header {
 } BlockHeader;
 
 /* Macros to handle the free flag at bit 0 of the next pointer of header pointed at by p */
-#define GET_NEXT(p)    (void *) ((uintptr_t) (p->next) & 0xFE)    /* 15 * `1111´ + ´1110´ to mask out the flag bit TEST THIS :)*/
-#define SET_NEXT(p,n)  p->next = (void *) ((GET_FREE(p) + 0xFFFFFFFFFFFFFFFE) & n ) | GET_FREE(p) /* This works according to a truth table TEST THIS :) */
+#define GET_NEXT(p)    (void *) ((uintptr_t) (p->next) & -2)    /* Here we mask out flag bit by using -2 = 0xFFF...FE which is sign extended to the length of pointer*/
+#define SET_NEXT(p,n)  p->next = (void *) ((GET_FREE(p) | ( (uintptr_t) n & -2))) /* Here we essentially flag + next (with ls bit cleared), so flag is preserved  */
 #define GET_FREE(p)    (uint8_t) ( (uintptr_t) (p->next) & 0x1 )   /* OK -- do not change */
-#define SET_FREE(p,f)  (uint8_t) ((uintptr_t) p->next = ((uintptr_t) (p->next) | f) & f) /*f needs to be either 0x0 or 0x1 TEST THIS :)*/
-#define SIZE(p)        (size_t) ( p->next - p - 0x40 ) /* Here 0x40 is 8 bytes for the block header TEST THIS :)*/ 
+#define SET_FREE(p,f)  p->next = (void *) ((((uintptr_t) (p->next)) & -2 ) | (f & 1))  /*Here we mask out everything but the ls bit and add the ls bit of f to it (either 0 or 1)*/
+#define SIZE(p)        (size_t) ( ((uintptr_t) GET_NEXT(p)) - ((uintptr_t) p) - sizeof(BlockHeader) ) /* using GET_NEXT(p) instead of p->next to make sure free flag doesn't interfere*/ 
 
 #define MIN_SIZE     (8)   // A block should have at least 8 bytes available for the user
 
