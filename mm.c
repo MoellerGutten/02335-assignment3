@@ -31,7 +31,6 @@ typedef struct header {
 
 static BlockHeader * first = NULL;
 static BlockHeader * current = NULL;
-static BlockHeader * dummy = NULL;
 
 /**
  * @name    simple_init
@@ -55,8 +54,8 @@ void simple_init() {
       // UNTESTED !!! Gets type warnings 
       first = aligned_memory_start;
       SET_FREE(first, 0);
-      dummy = aligned_memory_end - sizeof(BlockHeader) - 1; // The memory end is one address above actual end
-      SET_FREE(dummy, 1);
+      last = aligned_memory_end - sizeof(BlockHeader) - 1; // The memory end is one address above actual end
+      SET_FREE(last, 1);
     }
     current = first;     
   } 
