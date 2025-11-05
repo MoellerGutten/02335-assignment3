@@ -87,6 +87,7 @@ void *simple_malloc(size_t size)
 	/* Search for a free block */
 	BlockHeader *search_start = current;
 	BlockHeader *tempNext = NULL;
+	BlockHeader *returnAddr = NULL;
 
 	do
 	{
@@ -111,8 +112,7 @@ void *simple_malloc(size_t size)
 					/* TODO: Use block as is, marking it non-free*/
 					// UNTESTED !!!I
 					SET_FREE(current, 1);
-					SET_NEXT(current, (current + sizeof(BlockHeader) + SIZE(current)));
-					tempNext = current;
+					returnAddr = current;
 					current = GET_NEXT(current);
 				}
 				else
@@ -122,14 +122,13 @@ void *simple_malloc(size_t size)
 					SET_FREE(current, 1);
 					tempNext = GET_NEXT(current);
 					SET_NEXT(current, (current + aligned_size + sizeof(BlockHeader)));
-
+					returnAddr = current;
 					current = GET_NEXT(current);
 					SET_NEXT(current, tempNext);
 					SET_FREE(current, 0);
-					tempNext = current;
 				}
 				// UNTESTED !!!
-				return (void *)(tempNext + sizeof(BlockHeader)); /* TODO: Return address of current's user_block and advance current */
+				return (void *)(returnAddr + sizeof(BlockHeader)); /* TODO: Return address of current's user_block and advance current */
 			}
 		}
 
