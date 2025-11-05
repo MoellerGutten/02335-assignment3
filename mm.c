@@ -26,6 +26,8 @@ typedef struct header
 #define SIZE(p) (size_t)(((uintptr_t)GET_NEXT(p)) - ((uintptr_t)p) - sizeof(BlockHeader)) /* using GET_NEXT(p) instead of p->next to make sure free flag doesn't interfere*/
 
 #define MIN_SIZE (8) // A block should have at least 8 bytes available for the user
+#define FREE (0)
+#define ALOKATED (1)
 
 static BlockHeader *first = NULL;
 static BlockHeader *current = NULL;
@@ -90,17 +92,19 @@ void *simple_malloc(size_t size)
 
 	do
 	{
-		if (GET_FREE(current) == 0)
+		if (GET_FREE(current) == FREE)
 		{
 			/* Possibly coalesce consecutive free blocks here */
 			// UNTESTED !!!
-			// BlockHeader *next = GET_NEXT(current);
-			// while (GET_FREE(next))
-			// {
-			// 	next = GET_NEXT(next);
-			// }
-			// BlockHeader * currentNext = GET_NEXT(current);
-			// SET_NEXT(currentNext, next);
+			BlockHeader *next = GET_NEXT(current);
+			BlockHeader *lastNext = next;
+			if (next != NULL) {
+				while (GET_FREE(next) == FREE) {
+					lastNext = next;
+					next = GET_NEXT(next);
+				}
+				SET_NEXT(current, lastNext);
+			}
 
 			/* Check if free block is large enough */
 			if (SIZE(current) >= aligned_size)
@@ -167,14 +171,15 @@ void simple_free(void *ptr)
 
 	/* Possibly coalesce consecutive free blocks here */
 	// UNTESTED !!!
-	// BlockHeader *next = GET_NEXT(block);
-	// while (GET_FREE(next))
-	// {
-	// 	next = GET_NEXT(next);
-	// }
-
-	// BlockHeader * blockNext = GET_NEXT(block);
-	// SET_NEXT(blockNext, next);
+	BlockHeader *next = GET_NEXT(block);
+	BlockHeader *lastNext = next;
+	if (next != NULL) {
+		while (GET_FREE(next) == FREE) {
+			lastNext = next;
+			next = GET_NEXT(next);
+		}
+		SET_NEXT(block, lastNext);
+	}
 }
 
 /* Include test routines */
