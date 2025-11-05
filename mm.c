@@ -27,7 +27,7 @@ typedef struct header
 
 #define MIN_SIZE (8) // A block should have at least 8 bytes available for the user
 #define FREE (0)
-#define ALOKATED (1)
+#define ALLOCATED (1)
 
 static BlockHeader *first = NULL;
 static BlockHeader *current = NULL;
@@ -54,9 +54,9 @@ void simple_init()
 
 			// UNTESTED !!!
 			first = (void *)aligned_memory_start;
-			SET_FREE(first, 0);
+			SET_FREE(first, FREE);
 			BlockHeader *last = (void *)(aligned_memory_end - sizeof(BlockHeader));
-			SET_FREE(last, 1);
+			SET_FREE(last, ALLOCATED);
 			SET_NEXT(first, last);
 			SET_NEXT(last, first);
 		}
@@ -115,7 +115,7 @@ void *simple_malloc(size_t size)
 				{
 					/* TODO: Use block as is, marking it non-free*/
 					// UNTESTED !!!I
-					SET_FREE(current, 1);
+					SET_FREE(current, ALLOCATED);
 					returnAddr = current;
 					current = GET_NEXT(current);
 				}
@@ -123,16 +123,16 @@ void *simple_malloc(size_t size)
 				{
 					/* TODO: Carve aligned_size from block and allocate new free block for the rest */
 					// UNTESTED !!!
-					SET_FREE(current, 1);
+					SET_FREE(current, ALLOCATED);
 					tempNext = GET_NEXT(current);
-					SET_NEXT(current, (current + aligned_size + sizeof(BlockHeader)));
+					SET_NEXT(current, ((char *)current + aligned_size + sizeof(BlockHeader)));
 					returnAddr = current;
 					current = GET_NEXT(current);
 					SET_NEXT(current, tempNext);
-					SET_FREE(current, 0);
+					SET_FREE(current, FREE);
 				}
 				// UNTESTED !!!
-				return (void *)(returnAddr + sizeof(BlockHeader)); /* TODO: Return address of current's user_block and advance current */
+				return (void *)(returnAddr->user_block); /* TODO: Return address of current's user_block and advance current */
 			}
 		}
 
@@ -158,7 +158,7 @@ void simple_free(void *ptr)
 		return;
 
 	// UNTESTED !!!
-	BlockHeader *block = ptr; /* TODO: Find block corresponding to ptr */
+	BlockHeader *block = (BlockHeader* )ptr - 1; /* TODO: Find block corresponding to ptr */
 	if (GET_FREE(block))
 	{
 		/* Block is not in use -- probably an error */
@@ -166,7 +166,7 @@ void simple_free(void *ptr)
 	}
 
 	/* TODO: Free block */
-	SET_FREE(block, 0);
+	SET_FREE(block, FREE);
 
 	/* Possibly coalesce consecutive free blocks here */
 	// UNTESTED !!!
