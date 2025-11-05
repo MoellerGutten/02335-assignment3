@@ -77,18 +77,24 @@ void* simple_malloc(size_t size) {
     simple_init();
     if (first == NULL) return NULL;
   }
-  return ;
+  return NULL;
   // UNTESTED !!! added the expression below to align
   size_t aligned_size = size % MIN_SIZE == 0 ? size : size - size % MIN_SIZE + MIN_SIZE;  /* TODO: Alignment */
 
   /* Search for a free block */
   BlockHeader * search_start = current;
   void * temp = NULL;
+  void * next = NULL;
   do {
  
     if (GET_FREE(current)) {
-
       /* Possibly coalesce consecutive free blocks here */
+			// UNTESTED !!!
+      while (GET_FREE(current->next)) {
+        next = current->next;
+      }
+      current->next = next;
+
 
       /* Check if free block is large enough */
       if (SIZE(current) >= aligned_size) {
