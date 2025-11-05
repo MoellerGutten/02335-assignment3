@@ -77,7 +77,7 @@ void* simple_malloc(size_t size) {
 		simple_init();
 		if (first == NULL) return NULL;
 	}
-	
+
 	// UNTESTED !!! added the expression below to align
 	size_t aligned_size = size % MIN_SIZE == 0 ? size : size - size % MIN_SIZE + MIN_SIZE;  /* TODO: Alignment */
 	
@@ -103,6 +103,7 @@ void* simple_malloc(size_t size) {
 					/* TODO: Use block as is, marking it non-free*/
 					// UNTESTED !!!I
 					SET_FREE(current, 1);
+					SET_NEXT(current, (current + aligned_size + sizeof(BlockHeader)));
 					temp = current;
 				} else {
 					/* TODO: Carve aligned_size from block and allocate new free block for the rest */
