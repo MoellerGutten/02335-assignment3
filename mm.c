@@ -22,7 +22,7 @@ typedef struct header
 #define GET_NEXT(p) (void *)((uintptr_t)(p->next) & -2)									  /* Here we mask out flag bit by using -2 = 0xFFF...FE which is sign extended to the length of pointer*/
 #define SET_NEXT(p, n) p->next = (void *)((GET_FREE(p) | ((uintptr_t)n & -2)))			  /* Here we essentially flag + next (with ls bit cleared), so flag is preserved  */
 #define GET_FREE(p) (uint8_t)((uintptr_t)(p->next) & 0x1)								  /* OK -- do not change */
-#define SET_FREE(p, f) p->next = (void *)((((uintptr_t)(p->next)) & -2) | (f & 1))		  /*Here we mask out everything but the ls bit and add the ls bit of f to it (either 0 or 1)*/
+#define SET_FREE(p, f) p->next = (void *)(((uintptr_t)(p->next) & -2) | (f & 0x1))	  /*Here we mask out everything but the ls bit and add the ls bit of f to it (either 0 or 1) */
 #define SIZE(p) (size_t)(((uintptr_t)GET_NEXT(p)) - ((uintptr_t)p) - sizeof(BlockHeader)) /* using GET_NEXT(p) instead of p->next to make sure free flag doesn't interfere*/
 
 
@@ -88,56 +88,15 @@ void *simple_malloc(size_t size)
 	BlockHeader *search_start = current;
 	BlockHeader *tempNext = NULL;
 	BlockHeader *returnAddr = NULL;
-	int iteration_counter = 0;
 
 	do
 	{
-		iteration_counter++;
-		/* debug sanity check - put at top of loop in simple_malloc and also in simple_free when iterating */
-		uintptr_t cur = (uintptr_t)current;
-		uintptr_t nxt = (uintptr_t)GET_NEXT(current);
+		int freebit = GET_FREE(current);
+		if (freebit == FREE)
+		{	
+			int size = SIZE(current);
+			/* Coalesces consecutive free blocks here */
 
-		/* check next pointer lies inside memory region and is aligned */
-		if (nxt < memory_start || nxt > memory_end)
-		{
-			printf("BAD: GET_NEXT(current) out of range: cur=0x%08lx next=0x%08lx iter=%d\n",
-				   cur, nxt, iteration_counter);
-			simple_block_dump();
-			abort();
-		}
-		if ((nxt & 1) != 0)
-		{ /* sanity: GET_NEXT must return pointer with LSB cleared by macro */
-			printf("BAD: next has LSB set (odd): cur=0x%08lx next=0x%08lx\n", cur, nxt);
-			simple_block_dump();
-			abort();
-		}
-
-		/* check monotonicity in ring (next should be at least header size ahead or wrap to first) */
-		if (nxt <= cur)
-		{
-			/* This might be allowed only if nxt == (uintptr_t)first due to ring wrap.
-			   But in general nxt should be >= cur + sizeof(BlockHeader) unless it's first sentinel. */
-			if ((BlockHeader *)nxt != first)
-			{
-				printf("BAD: GET_NEXT(current) <= current (cur=0x%08lx next=0x%08lx)\n", cur, nxt);
-				simple_block_dump();
-				abort();
-			}
-		}
-
-		/* check SIZE is non-negative and reasonable */
-		size_t s = SIZE(current);
-		if (s > (memory_end - memory_start))
-		{
-			printf("BAD: SIZE(current) huge: %zu cur=0x%08lx next=0x%08lx\n", s, cur, nxt);
-			simple_block_dump();
-			abort();
-		}
-		
-		if (GET_FREE(current) == FREE)
-		{
-			/* Possibly coalesce consecutive free blocks here */
-			// UNTESTED !!!
 			BlockHeader *next = GET_NEXT(current);
 			BlockHeader *lastNext = next;
 
@@ -145,7 +104,6 @@ void *simple_malloc(size_t size)
 			{
 				lastNext = next;
 				next = GET_NEXT(next);
-				printf("IM COALESCING IN MALLOC OMGAWD");
 			}
 			SET_NEXT(current, lastNext);
 
@@ -156,16 +114,15 @@ void *simple_malloc(size_t size)
 				/* Will the remainder be large enough for a new block? */
 				if (SIZE(current) - aligned_size < sizeof(BlockHeader) + MIN_SIZE)
 				{
-					/* TODO: Use block as is, marking it non-free*/
-					// UNTESTED !!!I
+					// Just enough space between headers to insert block. The memory < 16 bytes will be included as padding
 					returnAddr = current;
 					SET_FREE(current, ALLOCATED);
 					current = GET_NEXT(current);
 				}
 				else
 				{
-					/* TODO: Carve aligned_size from block and allocate new free block for the rest */
-					// UNTESTED !!!
+					/*Carves aligned_size from block and allocate new free block for the rest */
+
 					tempNext = GET_NEXT(current);
 					SET_NEXT(current, ((char *)current + aligned_size + sizeof(BlockHeader)));
 					SET_FREE(current, ALLOCATED);
@@ -174,8 +131,8 @@ void *simple_malloc(size_t size)
 					SET_FREE(current, FREE);	
 					SET_NEXT(current, tempNext);
 				}
-				// UNTESTED !!!
-				return (void *)(returnAddr->user_block); /* TODO: Return address of current's user_block and advance current */
+
+				return (void *)(returnAddr->user_block); /* Returns address of current's user_block and advance current */
 			}
 		}
 		current = GET_NEXT(current);
@@ -199,9 +156,9 @@ void simple_free(void *ptr)
 	if (ptr == NULL)
 		return;
 
-	// UNTESTED !!!
 	BlockHeader *block = (BlockHeader *)ptr - 1; /* TODO: Find block corresponding to ptr */
-	if (GET_FREE(block))
+	int freebit = GET_FREE(block);
+	if (freebit == 0)
 	{
 		/* Block is not in use -- probably an error */
 		return;
@@ -214,11 +171,11 @@ void simple_free(void *ptr)
 		return;
 	}
 
-	/* TODO: Free block */
-
-	/* Possibly coalesce consecutive free blocks here */
-	// UNTESTED !!!
+	// frees block
 	SET_FREE(block, FREE);
+
+	/* Coalescing consecutive free blocks here */
+
 	BlockHeader *next = GET_NEXT(block);
 	BlockHeader *lastNext = next;
 	
@@ -226,7 +183,6 @@ void simple_free(void *ptr)
 	{
 		lastNext = next;
 		next = GET_NEXT(next);
-		printf("IM COALESCING IN FREE OMGAWD");
 	}
 	SET_NEXT(block, lastNext);
 }
