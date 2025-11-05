@@ -7,7 +7,7 @@
  */
 
 #include <stdint.h>
-
+#include <stdlib.h>
 #include "mm.h"
 
 /* Proposed data structure elements */
@@ -25,6 +25,7 @@ typedef struct header
 #define SET_FREE(p, f) p->next = (void *)((((uintptr_t)(p->next)) & -2) | (f & 1))		  /*Here we mask out everything but the ls bit and add the ls bit of f to it (either 0 or 1)*/
 #define SIZE(p) (size_t)(((uintptr_t)GET_NEXT(p)) - ((uintptr_t)p) - sizeof(BlockHeader)) /* using GET_NEXT(p) instead of p->next to make sure free flag doesn't interfere*/
 
+
 #define MIN_SIZE (8) // A block should have at least 8 bytes available for the user
 #define FREE (0)
 #define ALLOCATED (1)
@@ -39,10 +40,9 @@ static BlockHeader *current = NULL;
  */
 void simple_init()
 {
-	// UNTESTED !!! added " + start % MIN_SIZE (8)" to align
-	uintptr_t aligned_memory_start = memory_start % MIN_SIZE == 0 ? memory_start : memory_start - memory_start % MIN_SIZE + MIN_SIZE; /* TODO: Alignment */
-	// UNTESTED !!! added " - end % MIN_SIZE (8)" to align.
-	uintptr_t aligned_memory_end = memory_end - memory_end % MIN_SIZE; /* TODO: Alignment */
+	// Aligns memory start and end
+	uintptr_t aligned_memory_start = memory_start % MIN_SIZE == 0 ? memory_start : memory_start - memory_start % MIN_SIZE + MIN_SIZE; 
+	uintptr_t aligned_memory_end = memory_end - memory_end % MIN_SIZE;
 
 	/* Already initalized ? */
 	if (first == NULL)
@@ -50,12 +50,10 @@ void simple_init()
 		/* Check that we have room for at least one free block and an end header */
 		if (aligned_memory_start + 2 * sizeof(BlockHeader) + MIN_SIZE <= aligned_memory_end)
 		{
-			/* TODO: Place first and last blocks and set links and free flags properly */
-
-			// UNTESTED !!!
+			// Linking First and last (dummy) headers together before malloc
 			first = (void *)aligned_memory_start;
 			SET_FREE(first, FREE);
-			BlockHeader *last = (void *)(aligned_memory_end - sizeof(BlockHeader));
+			BlockHeader *last = (void *)((char *)aligned_memory_end - sizeof(BlockHeader));
 			SET_FREE(last, ALLOCATED);
 			SET_NEXT(first, last);
 			SET_NEXT(last, first);
@@ -83,31 +81,76 @@ void *simple_malloc(size_t size)
 			return NULL;
 	}
 
-	// UNTESTED !!! added the expression below to align
-	size_t aligned_size = size % MIN_SIZE == 0 ? size : size - size % MIN_SIZE + MIN_SIZE; /* TODO: Alignment */
+	// Aligns (pads) the size of the given memory block
+	size_t aligned_size = size % MIN_SIZE == 0 ? size : size - size % MIN_SIZE + MIN_SIZE; 
 
 	/* Search for a free block */
 	BlockHeader *search_start = current;
 	BlockHeader *tempNext = NULL;
 	BlockHeader *returnAddr = NULL;
+	int iteration_counter = 0;
 
 	do
 	{
+		iteration_counter++;
+		/* debug sanity check - put at top of loop in simple_malloc and also in simple_free when iterating */
+		uintptr_t cur = (uintptr_t)current;
+		uintptr_t nxt = (uintptr_t)GET_NEXT(current);
+
+		/* check next pointer lies inside memory region and is aligned */
+		if (nxt < memory_start || nxt > memory_end)
+		{
+			printf("BAD: GET_NEXT(current) out of range: cur=0x%08lx next=0x%08lx iter=%d\n",
+				   cur, nxt, iteration_counter);
+			simple_block_dump();
+			abort();
+		}
+		if ((nxt & 1) != 0)
+		{ /* sanity: GET_NEXT must return pointer with LSB cleared by macro */
+			printf("BAD: next has LSB set (odd): cur=0x%08lx next=0x%08lx\n", cur, nxt);
+			simple_block_dump();
+			abort();
+		}
+
+		/* check monotonicity in ring (next should be at least header size ahead or wrap to first) */
+		if (nxt <= cur)
+		{
+			/* This might be allowed only if nxt == (uintptr_t)first due to ring wrap.
+			   But in general nxt should be >= cur + sizeof(BlockHeader) unless it's first sentinel. */
+			if ((BlockHeader *)nxt != first)
+			{
+				printf("BAD: GET_NEXT(current) <= current (cur=0x%08lx next=0x%08lx)\n", cur, nxt);
+				simple_block_dump();
+				abort();
+			}
+		}
+
+		/* check SIZE is non-negative and reasonable */
+		size_t s = SIZE(current);
+		if (s > (memory_end - memory_start))
+		{
+			printf("BAD: SIZE(current) huge: %zu cur=0x%08lx next=0x%08lx\n", s, cur, nxt);
+			simple_block_dump();
+			abort();
+		}
+		
 		if (GET_FREE(current) == FREE)
 		{
 			/* Possibly coalesce consecutive free blocks here */
 			// UNTESTED !!!
 			BlockHeader *next = GET_NEXT(current);
 			BlockHeader *lastNext = next;
-			if (next != NULL) {
-				while (GET_FREE(next) == FREE) {
-					lastNext = next;
-					next = GET_NEXT(next);
-				}
-				SET_NEXT(current, lastNext);
+
+			while (GET_FREE(next) == FREE && next != current)
+			{
+				lastNext = next;
+				next = GET_NEXT(next);
+				printf("IM COALESCING IN MALLOC OMGAWD");
 			}
+			SET_NEXT(current, lastNext);
 
 			/* Check if free block is large enough */
+
 			if (SIZE(current) >= aligned_size)
 			{
 				/* Will the remainder be large enough for a new block? */
@@ -115,27 +158,26 @@ void *simple_malloc(size_t size)
 				{
 					/* TODO: Use block as is, marking it non-free*/
 					// UNTESTED !!!I
-					SET_FREE(current, ALLOCATED);
 					returnAddr = current;
+					SET_FREE(current, ALLOCATED);
 					current = GET_NEXT(current);
 				}
 				else
 				{
 					/* TODO: Carve aligned_size from block and allocate new free block for the rest */
 					// UNTESTED !!!
-					SET_FREE(current, ALLOCATED);
 					tempNext = GET_NEXT(current);
 					SET_NEXT(current, ((char *)current + aligned_size + sizeof(BlockHeader)));
+					SET_FREE(current, ALLOCATED);
 					returnAddr = current;
 					current = GET_NEXT(current);
+					SET_FREE(current, FREE);	
 					SET_NEXT(current, tempNext);
-					SET_FREE(current, FREE);
 				}
 				// UNTESTED !!!
 				return (void *)(returnAddr->user_block); /* TODO: Return address of current's user_block and advance current */
 			}
 		}
-
 		current = GET_NEXT(current);
 	} while (current != search_start);
 
@@ -158,27 +200,35 @@ void simple_free(void *ptr)
 		return;
 
 	// UNTESTED !!!
-	BlockHeader *block = (BlockHeader* )ptr - 1; /* TODO: Find block corresponding to ptr */
+	BlockHeader *block = (BlockHeader *)ptr - 1; /* TODO: Find block corresponding to ptr */
 	if (GET_FREE(block))
 	{
 		/* Block is not in use -- probably an error */
 		return;
 	}
+	// Should not free the dummy block, so returns
+	uintptr_t aligned_memory_end = memory_end - memory_end % MIN_SIZE;
+	BlockHeader *last = (void *)((char *)aligned_memory_end - sizeof(BlockHeader));
+	if (block == last)
+	{
+		return;
+	}
 
 	/* TODO: Free block */
-	SET_FREE(block, FREE);
 
 	/* Possibly coalesce consecutive free blocks here */
 	// UNTESTED !!!
+	SET_FREE(block, FREE);
 	BlockHeader *next = GET_NEXT(block);
 	BlockHeader *lastNext = next;
-	if (next != NULL) {
-		while (GET_FREE(next) == FREE) {
-			lastNext = next;
-			next = GET_NEXT(next);
-		}
-		SET_NEXT(block, lastNext);
+	
+	while (GET_FREE(next) == FREE && next != block)
+	{
+		lastNext = next;
+		next = GET_NEXT(next);
+		printf("IM COALESCING IN FREE OMGAWD");
 	}
+	SET_NEXT(block, lastNext);
 }
 
 /* Include test routines */
