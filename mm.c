@@ -89,13 +89,12 @@ void* simple_malloc(size_t size) {
 	do {
 		
 		if (GET_FREE(current)) {
-			
 			/* Possibly coalesce consecutive free blocks here */
 			// UNTESTED !!!
-      while (GET_FREE(current->next)) {
-        next = current->next;
-      }
-      current->next = next;
+			while (GET_FREE(current->next)) {
+				next = current->next;
+			}
+			current->next = next;
 			
 			/* Check if free block is large enough */
 			if (SIZE(current) >= aligned_size) {
