@@ -58,7 +58,7 @@ void simple_init() {
 			SET_NEXT(last, first);
 		}
 		current = first;     
-	} 
+	}
 }
 
 
