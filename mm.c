@@ -84,17 +84,17 @@ void* simple_malloc(size_t size) {
 	/* Search for a free block */
 	BlockHeader * search_start = current;
 	BlockHeader * temp = NULL;
-	BlockHeader * next = NULL;
 
 	do {
 		
 		if (GET_FREE(current)) {
 			/* Possibly coalesce consecutive free blocks here */
 			// UNTESTED !!!
-			while (GET_FREE(current->next)) {
-				next = current->next;
+			BlockHeader * next = GET_NEXT(current);
+			while (GET_FREE(next)) {
+				next = GET_NEXT(next);
 			}
-			current->next = next;
+			SET_NEXT(current, next);
 			
 			/* Check if free block is large enough */
 			if (SIZE(current) >= aligned_size) {
@@ -137,6 +137,8 @@ void* simple_malloc(size_t size) {
 *
 */
 void simple_free(void * ptr) {
+	if (ptr == NULL) return ;
+
 	// UNTESTED !!!
 	BlockHeader * block = ptr; /* TODO: Find block corresponding to ptr */
 	if (GET_FREE(block)) {
@@ -148,6 +150,12 @@ void simple_free(void * ptr) {
 	SET_FREE(block, 0);
 	
 	/* Possibly coalesce consecutive free blocks here */
+	// UNTESTED !!!
+	BlockHeader * next = GET_NEXT(block);
+	while (GET_FREE(next)) {
+		next = GET_NEXT(next);
+	}
+	SET_NEXT(block, next);
 }
 
 
