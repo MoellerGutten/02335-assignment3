@@ -1,10 +1,10 @@
 /**
- * @file   mm.c
- * @Author 02335 team
- * @date   September, 2024
- * @brief  Memory management skeleton.
- * 
- */
+* @file   mm.c
+* @Author 02335 team
+* @date   September, 2024
+* @brief  Memory management skeleton.
+* 
+*/
 
 #include <stdint.h>
 
@@ -15,8 +15,8 @@
 /* Proposed data structure elements */
 
 typedef struct header {
-  struct header * next;     // Bit 0 is used to indicate free block 
-  uint64_t user_block[0];   // Standard trick: Empty array to make sure start of user block is aligned
+	struct header * next;     // Bit 0 is used to indicate free block 
+	uint64_t user_block[0];   // Standard trick: Empty array to make sure start of user block is aligned
 } BlockHeader;
 
 /* Macros to handle the free flag at bit 0 of the next pointer of header pointed at by p */
@@ -33,108 +33,113 @@ static BlockHeader * first = NULL;
 static BlockHeader * current = NULL;
 
 /**
- * @name    simple_init
- * @brief   Initialize the block structure within the available memory
- *
- */
+* @name    simple_init
+* @brief   Initialize the block structure within the available memory
+*
+*/
 void simple_init() {
-  // UNTESTED !!! added " + start % MIN_SIZE (8)" to align
-  uintptr_t aligned_memory_start = memory_start % MIN_SIZE == 0 ? memory_start : memory_start - memory_start % MIN_SIZE + MIN_SIZE;  /* TODO: Alignment */
-  // UNTESTED !!! added " - end % MIN_SIZE (8)" to align. -1 since memory_end points to the first bit of memory we *can'* use
-  uintptr_t aligned_memory_end = memory_end - memory_end % MIN_SIZE - 1;    /* TODO: Alignment */
-
-  /* Already initalized ? */
-  if (first == NULL) {
-    /* Check that we have room for at least one free block and an end header */
-    if (aligned_memory_start + 2*sizeof(BlockHeader) + MIN_SIZE <= aligned_memory_end) {
-      /* TODO: Place first and last blocks and set links and free flags properly */
-      
-      // UNTESTED !!!
-      first = (void *) aligned_memory_start;
-      SET_FREE(first, 0);
-      BlockHeader * last = (void *) (aligned_memory_end - sizeof(BlockHeader));
-      SET_FREE(last, 1);
-      SET_NEXT(first, last);
-      SET_NEXT(last, first);
-    }
-    current = first;     
-  } 
+	// UNTESTED !!! added " + start % MIN_SIZE (8)" to align
+	uintptr_t aligned_memory_start = memory_start % MIN_SIZE == 0 ? memory_start : memory_start - memory_start % MIN_SIZE + MIN_SIZE;  /* TODO: Alignment */
+	// UNTESTED !!! added " - end % MIN_SIZE (8)" to align. -1 since memory_end points to the first bit of memory we *can'* use
+	uintptr_t aligned_memory_end = memory_end - memory_end % MIN_SIZE - 1;    /* TODO: Alignment */
+	
+	/* Already initalized ? */
+	if (first == NULL) {
+		/* Check that we have room for at least one free block and an end header */
+		if (aligned_memory_start + 2*sizeof(BlockHeader) + MIN_SIZE <= aligned_memory_end) {
+			/* TODO: Place first and last blocks and set links and free flags properly */
+			
+			// UNTESTED !!!
+			first = (void *) aligned_memory_start;
+			SET_FREE(first, 0);
+			BlockHeader * last = (void *) (aligned_memory_end - sizeof(BlockHeader));
+			SET_FREE(last, 1);
+			SET_NEXT(first, last);
+			SET_NEXT(last, first);
+		}
+		current = first;     
+	} 
 }
 
 
 /**
- * @name    simple_malloc
- * @brief   Allocate at least size contiguous bytes of memory and return a pointer to the first byte.
- *
- * This function should behave similar to a normal malloc implementation. 
- *
- * @param size_t size Number of bytes to allocate.
- * @retval Pointer to the start of the allocated memory or NULL if not possible.
- *
- */
+* @name    simple_malloc
+* @brief   Allocate at least size contiguous bytes of memory and return a pointer to the first byte.
+*
+* This function should behave similar to a normal malloc implementation. 
+*
+* @param size_t size Number of bytes to allocate.
+* @retval Pointer to the start of the allocated memory or NULL if not possible.
+*
+*/
 void* simple_malloc(size_t size) {
-  if (first == NULL) {
-    simple_init();
-    if (first == NULL) return NULL;
-  }
-  return ;
-  // UNTESTED !!! added the expression below to align
-  size_t aligned_size = size % MIN_SIZE == 0 ? size : size - size % MIN_SIZE + MIN_SIZE;  /* TODO: Alignment */
-
-  /* Search for a free block */
-  BlockHeader * search_start = current;
-  void * temp = NULL;
-  do {
- 
-    if (GET_FREE(current)) {
-
-      /* Possibly coalesce consecutive free blocks here */
-
-      /* Check if free block is large enough */
-      if (SIZE(current) >= aligned_size) {
-        /* Will the remainder be large enough for a new block? */
-        if (SIZE(current) - aligned_size < sizeof(BlockHeader) + MIN_SIZE) {
-          /* TODO: Use block as is, marking it non-free*/
-          // UNTESTED !!!
-          SET_FREE(current, 1);
-          temp = current;
-        } else {
-          /* TODO: Carve aligned_size from block and allocate new free block for the rest */
-        }
-        // UNTESTED !!!
-        current = GET_NEXT(current);
-        return (void *) (temp + sizeof(BlockHeader)); /* TODO: Return address of current's user_block and advance current */
-      }
-    }
-
-    current = GET_NEXT(current);
-  } while (current != search_start);
-
- /* None found */
-  return NULL;
+	if (first == NULL) {
+		simple_init();
+		if (first == NULL) return NULL;
+	}
+	
+	// UNTESTED !!! added the expression below to align
+	size_t aligned_size = size % MIN_SIZE == 0 ? size : size - size % MIN_SIZE + MIN_SIZE;  /* TODO: Alignment */
+	
+	/* Search for a free block */
+	BlockHeader * search_start = current;
+	BlockHeader * temp = NULL;
+	do {
+		
+		if (GET_FREE(current)) {
+			
+			/* Possibly coalesce consecutive free blocks here */
+			
+			/* Check if free block is large enough */
+			if (SIZE(current) >= aligned_size) {
+				/* Will the remainder be large enough for a new block? */
+				if (SIZE(current) - aligned_size < sizeof(BlockHeader) + MIN_SIZE) {
+					/* TODO: Use block as is, marking it non-free*/
+					// UNTESTED !!!I
+					SET_FREE(current, 1);
+					temp = current;
+				} else {
+					/* TODO: Carve aligned_size from block and allocate new free block for the rest */
+					// UNTESTED !!!
+					SET_FREE(current, 1);
+					SET_NEXT(temp, GET_NEXT(current));
+					SET_NEXT(current, (current + aligned_size + sizeof(BlockHeader)));
+				}
+				// UNTESTED !!!
+				current = GET_NEXT(current);
+				return (void *) (temp + sizeof(BlockHeader)); /* TODO: Return address of current's user_block and advance current */
+			}
+		}
+		
+		current = GET_NEXT(current);
+	} while (current != search_start);
+	
+	/* None found */
+	return NULL;
 }
 
 
 /**
- * @name    simple_free
- * @brief   Frees previously allocated memory and makes it available for subsequent calls to simple_malloc
- *
- * This function should behave similar to a normal free implementation. 
- *
- * @param void *ptr Pointer to the memory to free.
- *
- */
+* @name    simple_free
+* @brief   Frees previously allocated memory and makes it available for subsequent calls to simple_malloc
+*
+* This function should behave similar to a normal free implementation. 
+*
+* @param void *ptr Pointer to the memory to free.
+*
+*/
 void simple_free(void * ptr) {
-  return ;
-  BlockHeader * block = NULL; /* TODO: Find block corresponding to ptr */
-  if (GET_FREE(block)) {
-    /* Block is not in use -- probably an error */
-    return;
-  }
-
-  /* TODO: Free block */
-
-  /* Possibly coalesce consecutive free blocks here */
+	// UNTESTED !!!
+	BlockHeader * block = ptr; /* TODO: Find block corresponding to ptr */
+	if (GET_FREE(block)) {
+		/* Block is not in use -- probably an error */
+		return;
+	}
+	
+	/* TODO: Free block */
+	SET_FREE(block, 0);
+	
+	/* Possibly coalesce consecutive free blocks here */
 }
 
 
