@@ -104,6 +104,7 @@ void* simple_malloc(size_t size) {
 					SET_FREE(current, 1);
 					SET_NEXT(temp, GET_NEXT(current));
 					SET_NEXT(current, (current + aligned_size + sizeof(BlockHeader)));
+					temp = current;
 				}
 				// UNTESTED !!!
 				current = GET_NEXT(current);
