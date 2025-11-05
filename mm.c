@@ -85,12 +85,11 @@ void *simple_malloc(size_t size)
 	}
 
 	// UNTESTED !!! added the expression below to align
-	size_t aligned_size = size % MIN_SIZE == 0 ? size : size - size % MIN_SIZE + MIN_SIZE; /* TODO: Alignment */
-
+	size_t aligned_size = size % MIN_SIZE == 0 ? size : size - size % MIN_SIZE + MIN_SIZE;  /* TODO: Alignment */
+	
 	/* Search for a free block */
-	BlockHeader *search_start = current;
-	BlockHeader *temp = NULL;
-	BlockHeader *next = NULL;
+	BlockHeader * search_start = current;
+	BlockHeader * temp = NULL;
 
 	do
 	{
@@ -98,12 +97,12 @@ void *simple_malloc(size_t size)
 		{
 			/* Possibly coalesce consecutive free blocks here */
 			// UNTESTED !!!
-			while (GET_FREE(current->next))
-			{
-				next = current->next;
-			}
-			current->next = next;
-
+			// BlockHeader * next = current;
+			// while (GET_FREE(next)) {
+			// 	next = GET_NEXT(next);
+			// }
+			// SET_NEXT(current->next, next);
+			
 			/* Check if free block is large enough */
 			if (SIZE(current) >= aligned_size)
 			{
@@ -121,9 +120,9 @@ void *simple_malloc(size_t size)
 					/* TODO: Carve aligned_size from block and allocate new free block for the rest */
 					// UNTESTED !!!
 					SET_FREE(current, 1);
+					temp = current;
 					SET_NEXT(temp, GET_NEXT(current));
 					SET_NEXT(current, (current + aligned_size + sizeof(BlockHeader)));
-					temp = current;
 				}
 				// UNTESTED !!!
 				current = GET_NEXT(current);
@@ -140,19 +139,19 @@ void *simple_malloc(size_t size)
 
 
 /**
- * @name    simple_free
- * @brief   Frees previously allocated memory and makes it available for subsequent calls to simple_malloc
- *
- * This function should behave similar to a normal free implementation.
- *
- * @param void *ptr Pointer to the memory to free.
- *
- */
-void simple_free(void *ptr)
-{
+* @name    simple_free
+* @brief   Frees previously allocated memory and makes it available for subsequent calls to simple_malloc
+*
+* This function should behave similar to a normal free implementation. 
+*
+* @param void *ptr Pointer to the memory to free.
+*
+*/
+void simple_free(void * ptr) {
+	if (ptr == NULL) return ;
+
 	// UNTESTED !!!
 	BlockHeader *block = ptr; /* TODO: Find block corresponding to ptr */
-	BlockHeader *next = NULL;
 	if (GET_FREE(block))
 	{
 		/* Block is not in use -- probably an error */
@@ -163,6 +162,12 @@ void simple_free(void *ptr)
 	SET_FREE(block, 0);
 
 	/* Possibly coalesce consecutive free blocks here */
+	// UNTESTED !!!
+	// BlockHeader * next = block;
+	// while (GET_FREE(next)) {
+	// 	next = GET_NEXT(next);
+	// }
+	// SET_NEXT(block->next, next);
 }
 
 
