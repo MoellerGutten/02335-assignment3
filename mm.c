@@ -10,8 +10,6 @@
 
 #include "mm.h"
 
-
-
 /* Proposed data structure elements */
 
 typedef struct header
@@ -41,7 +39,7 @@ void simple_init()
 {
 	// UNTESTED !!! added " + start % MIN_SIZE (8)" to align
 	uintptr_t aligned_memory_start = memory_start % MIN_SIZE == 0 ? memory_start : memory_start - memory_start % MIN_SIZE + MIN_SIZE; /* TODO: Alignment */
-	// UNTESTED !!! added " - end % MIN_SIZE (8)" to align. 
+	// UNTESTED !!! added " - end % MIN_SIZE (8)" to align.
 	uintptr_t aligned_memory_end = memory_end - memory_end % MIN_SIZE; /* TODO: Alignment */
 
 	/* Already initalized ? */
@@ -64,7 +62,6 @@ void simple_init()
 	}
 }
 
-
 /**
  * @name    simple_malloc
  * @brief   Allocate at least size contiguous bytes of memory and return a pointer to the first byte.
@@ -85,11 +82,11 @@ void *simple_malloc(size_t size)
 	}
 
 	// UNTESTED !!! added the expression below to align
-	size_t aligned_size = size % MIN_SIZE == 0 ? size : size - size % MIN_SIZE + MIN_SIZE;  /* TODO: Alignment */
-	
+	size_t aligned_size = size % MIN_SIZE == 0 ? size : size - size % MIN_SIZE + MIN_SIZE; /* TODO: Alignment */
+
 	/* Search for a free block */
-	BlockHeader * search_start = current;
-	BlockHeader * temp = NULL;
+	BlockHeader *search_start = current;
+	BlockHeader *tempNext = NULL;
 
 	do
 	{
@@ -97,12 +94,14 @@ void *simple_malloc(size_t size)
 		{
 			/* Possibly coalesce consecutive free blocks here */
 			// UNTESTED !!!
-			// BlockHeader * next = current;
-			// while (GET_FREE(next)) {
+			// BlockHeader *next = GET_NEXT(current);
+			// while (GET_FREE(next))
+			// {
 			// 	next = GET_NEXT(next);
 			// }
-			// SET_NEXT(current->next, next);
-			
+			// BlockHeader * currentNext = GET_NEXT(current);
+			// SET_NEXT(currentNext, next);
+
 			/* Check if free block is large enough */
 			if (SIZE(current) >= aligned_size)
 			{
@@ -112,21 +111,25 @@ void *simple_malloc(size_t size)
 					/* TODO: Use block as is, marking it non-free*/
 					// UNTESTED !!!I
 					SET_FREE(current, 1);
-					SET_NEXT(current, (current + aligned_size + sizeof(BlockHeader)));
-					temp = current;
+					SET_NEXT(current, (current + sizeof(BlockHeader) + SIZE(current)));
+					tempNext = current;
+					current = GET_NEXT(current);
 				}
 				else
 				{
 					/* TODO: Carve aligned_size from block and allocate new free block for the rest */
 					// UNTESTED !!!
 					SET_FREE(current, 1);
-					temp = current;
-					SET_NEXT(temp, GET_NEXT(current));
+					tempNext = GET_NEXT(current);
 					SET_NEXT(current, (current + aligned_size + sizeof(BlockHeader)));
+
+					current = GET_NEXT(current);
+					SET_NEXT(current, tempNext);
+					SET_FREE(current, 0);
+					tempNext = current;
 				}
 				// UNTESTED !!!
-				current = GET_NEXT(current);
-				return (void *)(temp + sizeof(BlockHeader)); /* TODO: Return address of current's user_block and advance current */
+				return (void *)(tempNext + sizeof(BlockHeader)); /* TODO: Return address of current's user_block and advance current */
 			}
 		}
 
@@ -137,18 +140,19 @@ void *simple_malloc(size_t size)
 	return NULL;
 }
 
-
 /**
-* @name    simple_free
-* @brief   Frees previously allocated memory and makes it available for subsequent calls to simple_malloc
-*
-* This function should behave similar to a normal free implementation. 
-*
-* @param void *ptr Pointer to the memory to free.
-*
-*/
-void simple_free(void * ptr) {
-	if (ptr == NULL) return ;
+ * @name    simple_free
+ * @brief   Frees previously allocated memory and makes it available for subsequent calls to simple_malloc
+ *
+ * This function should behave similar to a normal free implementation.
+ *
+ * @param void *ptr Pointer to the memory to free.
+ *
+ */
+void simple_free(void *ptr)
+{
+	if (ptr == NULL)
+		return;
 
 	// UNTESTED !!!
 	BlockHeader *block = ptr; /* TODO: Find block corresponding to ptr */
@@ -163,13 +167,15 @@ void simple_free(void * ptr) {
 
 	/* Possibly coalesce consecutive free blocks here */
 	// UNTESTED !!!
-	// BlockHeader * next = block;
-	// while (GET_FREE(next)) {
+	// BlockHeader *next = GET_NEXT(block);
+	// while (GET_FREE(next))
+	// {
 	// 	next = GET_NEXT(next);
 	// }
-	// SET_NEXT(block->next, next);
-}
 
+	// BlockHeader * blockNext = GET_NEXT(block);
+	// SET_NEXT(blockNext, next);
+}
 
 /* Include test routines */
 
