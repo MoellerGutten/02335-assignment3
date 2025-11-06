@@ -11,7 +11,7 @@ TEST_OBJECTS := $(TEST_SOURCES:.c=.o)
 CHECK_SOURCES := check_mm.c mm.c memory_setup.c
 CHECK_OBJECTS := $(CHECK_SOURCES:.c=.o)
 
-APP_SOURCES := main.c io.c mm.c memory_setup.c
+APP_SOURCES := main.c io.c mm.c memory_setup.c autil.c
 APP_OBJECTS := $(APP_SOURCES:.c=.o)
 
 TEST_EXECUTABLE = mm_test
