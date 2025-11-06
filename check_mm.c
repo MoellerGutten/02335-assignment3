@@ -270,6 +270,37 @@ START_TEST(test_memory_exerciser) {
 
 END_TEST
 
+
+/**
+ * @name   Using next fit test
+ * @brief  Tests whether the implementation is using next fit as a algorithm.
+ */
+START_TEST(next_fit_test) {
+    int *ptr1;
+    int *ptr2;
+    int *ptr3;
+    int *ptr4;
+
+    ptr1 = MALLOC(0x80);
+    ptr2 = MALLOC(0x80);
+    ptr3 = MALLOC(0x80);
+    FREE(ptr1);
+    FREE(ptr2);
+    ptr4 = MALLOC(0x80);
+
+    /* Test whether ptr4 is after ptr3 and not in ptr1 place*/
+    ck_assert(ptr1 != ptr4);
+    ck_assert((void *)(((uintptr_t) ptr1) + (3 * (0x80 + 0x8))) == ptr4);
+    ck_assert((void *)(((uintptr_t) ptr3) + (0x80 + 0x8)) == ptr4);
+
+    FREE(ptr3);
+    FREE(ptr4);
+}
+
+
+END_TEST
+
+
 /**
  * { You may provide more unit tests here, but remember to add them to simple_malloc_suite }
  */
@@ -286,6 +317,7 @@ Suite *simple_malloc_suite() {
     tcase_add_test(tc_core, test_simple_allocation);
     tcase_add_test(tc_core, test_simple_unique_addresses);
     tcase_add_test(tc_core, test_memory_exerciser);
+    tcase_add_test(tc_core, next_fit_test);
 
     suite_add_tcase(s, tc_core);
     return s;
