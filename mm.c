@@ -95,8 +95,7 @@ void *simple_malloc(size_t size) {
 	BlockHeader *returnAddr = NULL;
 
 	do {
-		int freebit = GET_FREE(current);
-		if (freebit == FREE) {
+		if (GET_FREE(current) == FREE) {
 			/* Coalesces consecutive free blocks here */
 			BlockHeader *next = GET_NEXT(current);
 			BlockHeader *last_next = next;
